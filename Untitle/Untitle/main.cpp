@@ -1,11 +1,12 @@
-#include <d3d9.h>
+#include <Windows.h>
+#include <mmsystem.h>
+#include <d3dx9.h>
 
 struct CUSTOMVERTEX
 {
 	FLOAT x, y, z, rhw;
 	DWORD color;
 };
-
 
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW | D3DFVF_DIFFUSE) 
 
@@ -28,6 +29,9 @@ HRESULT InitD3D(HWND hWnd)
 		return E_FAIL;
 	}
 
+	g_pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+	g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
+
 	return S_OK;
 }
 
@@ -36,8 +40,8 @@ HRESULT InitVertex()
 	CUSTOMVERTEX vertices[] =
 	{
 		{ 150.0f, 50.0f, 0.5f, 1.0f, 0xffff0000, },
-	{ 250.0f, 250.0f, 0.5f, 1.0f, 0xff00ff00, },
-	{ 50.0f, 250.0f, 0.5f, 1.0f, 0xff00ffff, },
+		{ 250.0f, 250.0f, 0.5f, 1.0f, 0xff00ff00, },
+		{ 50.0f, 250.0f, 0.5f, 1.0f, 0xff00ffff, },
 	};
 
 	if (FAILED(g_pd3dDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),
@@ -56,8 +60,30 @@ HRESULT InitVertex()
 
 VOID Cleanup()
 {
+	if (g_pVB) { g_pVB->Release(); }
 	if (!g_pd3dDevice) { g_pd3dDevice->Release(); }
 	if (!g_pD3D) { g_pD3D->Release(); }
+}
+
+VOID SetupMatrices()
+{
+	D3DXMATRIXA16 matWorld;
+
+	UINT iTime = timeGetTime() % 1000;
+	FLOAT fAngle = iTime * (2.0f * D3DX_PI) / 1000.0f;
+	D3DXMatrixRotationY(&matWorld, fAngle);
+	g_pd3dDevice->SetTransform(D3DTS_WORLD, &matWorld);
+
+	D3DXVECTOR3 vEyePt(0.0f, 3.0f, -5.0f);
+	D3DXVECTOR3 vLookatPt(0.0f, 0.0f, 0.0f);
+	D3DXVECTOR3 vUpVec(0.0f, 1.0f, 0.0f);
+	D3DXMATRIXA16 matView;
+	D3DXMatrixLookAtLH(&matView, &vEyePt, &vLookatPt, &vUpVec);
+	g_pd3dDevice->SetTransform(D3DTS_VIEW, &matView);
+
+	D3DXMATRIXA16 matProj;
+	D3DXMatrixPerspectiveFovLH(&matProj, D3DX_PI / 4, 1.0f, 1.0f, 100.0f);
+	g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &matProj);
 }
 
 VOID Render()
@@ -66,12 +92,14 @@ VOID Render()
 
 	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET,
 		D3DCOLOR_XRGB(0, 0, 255), 1.0f, 0);
-
+	
 	if (SUCCEEDED(g_pd3dDevice->BeginScene()))
 	{
+		SetupMatrices();
+
 		g_pd3dDevice->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
 		g_pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
-		g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 1);
+		g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 1);
 
 		g_pd3dDevice->EndScene();
 	}
