@@ -2,17 +2,27 @@
 #include <mmsystem.h>
 #include <d3dx9.h>
 
+#define USE_TEXTURE
+
 LPDIRECT3D9	g_pD3D = NULL;
 LPDIRECT3DDEVICE9 g_pd3dDevice = NULL;
 LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL;
+LPDIRECT3DTEXTURE9 g_pTexture = NULL;
 
 struct CUSTOMVERTEX
 {
 	D3DXVECTOR3 position;
-	D3DXVECTOR3 normal;
+	D3DCOLOR color;
+#ifdef USE_TEXTURE
+	FLOAT tu, tv;
+#endif
 };
 
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ | D3DFVF_NORMAL) 
+#ifdef USE_TEXTURE
+#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1) 
+#else
+#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ | D3DFVF_DIFFUSE) 
+#endif
 
 HRESULT InitD3D(HWND hWnd)
 {
@@ -30,6 +40,7 @@ HRESULT InitD3D(HWND hWnd)
 		D3DCREATE_SOFTWARE_VERTEXPROCESSING, &d3dpp, &g_pd3dDevice))) return E_FAIL;
 
 	g_pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+	g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
 	g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, TRUE);
 
 	return S_OK;
@@ -37,6 +48,15 @@ HRESULT InitD3D(HWND hWnd)
 
 HRESULT InitGeometry()
 {
+	if (FAILED(D3DXCreateTextureFromFile(g_pd3dDevice, L"tile.jpg", &g_pTexture)))
+	{
+		if (FAILED(D3DXCreateTextureFromFile(g_pd3dDevice, L"..\\tile.jpg", &g_pTexture)))
+		{
+			MessageBox(NULL, L"Could not find banana.bmp", L"Textures.exe", MB_OK);
+			return E_FAIL;
+		}
+	}
+
 	if (FAILED(g_pd3dDevice->CreateVertexBuffer(50 * 2 * sizeof(CUSTOMVERTEX),
 		0, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL))) return E_FAIL;
 		
@@ -46,10 +66,19 @@ HRESULT InitGeometry()
 	for (DWORD i = 0; i < 50; i++)
 	{
 		FLOAT theta = (2 * D3DX_PI * i) / (50 - 1);
+
 		pVertices[2 * i + 0].position = D3DXVECTOR3(sinf(theta), -1.0f, cosf(theta));
-		pVertices[2 * i + 0].normal = D3DXVECTOR3(sinf(theta), 0.0f, cosf(theta));
+		pVertices[2 * i + 0].color = 0xffffffff;
+#ifdef USE_TEXTURE
+		pVertices[2 * i + 0].tu = ((FLOAT) i) / (50 - 1);
+		pVertices[2 * i + 0].tv = 1.0f;
+#endif
 		pVertices[2 * i + 1].position = D3DXVECTOR3(sinf(theta), 1.0f, cosf(theta));
-		pVertices[2 * i + 1].normal = D3DXVECTOR3(sinf(theta), 0.0f, cosf(theta));
+		pVertices[2 * i + 1].color = 0xff808080;
+#ifdef USE_TEXTURE
+		pVertices[2 * i + 1].tu = ((FLOAT)i) / (50 - 1);
+		pVertices[2 * i + 1].tv = 0.0f;
+#endif
 	}
 	g_pVB->Unlock();
 
@@ -58,6 +87,7 @@ HRESULT InitGeometry()
 
 VOID Cleanup()
 {
+	if (g_pTexture != NULL) g_pTexture->Release();
 	if (g_pVB != NULL) g_pVB->Release();
 	if (g_pd3dDevice != NULL) g_pd3dDevice->Release();
 	if (g_pD3D != NULL) g_pD3D->Release();
@@ -67,7 +97,7 @@ VOID SetupMatrices()
 {
 	D3DXMATRIXA16 matWorld;
 	D3DXMatrixIdentity(&matWorld);
-	D3DXMatrixRotationX(&matWorld, timeGetTime() / 500.0f);
+	D3DXMatrixRotationX(&matWorld, timeGetTime() / 1000.0f);
 	g_pd3dDevice->SetTransform(D3DTS_WORLD, &matWorld);
 
 	D3DXVECTOR3 vEyePt(0.0f, 3.0f, -5.0f);
@@ -110,14 +140,32 @@ VOID SetupLights()
 
 VOID Render()
 {
-
 	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER,
 		D3DCOLOR_XRGB(0, 0, 255), 1.0f, 0);
 	
 	if (SUCCEEDED(g_pd3dDevice->BeginScene()))
 	{
-		SetupLights();
+		//SetupLights();
 		SetupMatrices();
+
+		g_pd3dDevice->SetTexture(0, g_pTexture);
+		g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+		g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+		g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+		g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+
+#ifdef USE_TEXTURE
+		D3DXMATRIXA16 mat;
+
+		mat._11 = 0.25f; mat._12 = 0.00f; mat._13 = 0.00f; mat._14 = 0.00f;
+		mat._21 = 0.00f; mat._22 =-0.25f; mat._23 = 0.00f; mat._24 = 0.00f;
+		mat._31 = 0.00f; mat._32 = 0.00f; mat._33 = 1.00f; mat._34 = 0.00f;
+		mat._41 = 0.50f; mat._42 = 0.50f; mat._43 = 0.00f; mat._44 = 1.00f;
+
+		g_pd3dDevice->SetTransform(D3DTS_TEXTURE0, &mat);
+		g_pd3dDevice->SetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
+		g_pd3dDevice->SetTextureStageState(0, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_CAMERASPACEPOSITION);
+#endif
 
 		g_pd3dDevice->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
 		g_pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
@@ -150,7 +198,7 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 	RegisterClassEx(&wc);
 
 	HWND hWnd = CreateWindow(L"D3D Tutorial", L"D3D Tutorial",
-		WS_OVERLAPPEDWINDOW, 100, 100, 300, 300,
+		WS_OVERLAPPEDWINDOW, 100, 100, 600, 600,
 		GetDesktopWindow(), NULL, wc.hInstance, NULL);
 
 	if (SUCCEEDED(InitD3D(hWnd)))
