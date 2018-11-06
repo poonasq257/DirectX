@@ -52,7 +52,7 @@ bool InitWindowsApp(HINSTANCE instanceHandle, int show)
 		//static_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH));
 		static_cast<HBRUSH>(::GetStockObject(DKGRAY_BRUSH));
 	wc.lpszMenuName = 0; // 창의 메뉴 지정
-	wc.lpszClassName = "Hello!"; // 창의 클래스 수조체 이름 지정
+	wc.lpszClassName = "Hello!"; // 창의 클래스 구조체 이름 지정
 
 	if (!::RegisterClass(&wc)) // 창정보를 윈도우에 등록
 	{
@@ -70,7 +70,7 @@ bool InitWindowsApp(HINSTANCE instanceHandle, int show)
 		CW_USEDEFAULT, // 필셀 단위 창의 너비
 		CW_USEDEFAULT, // 픽셀단위 창의 높이
 		0, // 현재 창의 부모가 될 창의 핸들(이 창은 부모가 없기에 0값 지정)
-		0, // 메루오의 핸들(메뉴가 없기에 0 지정)
+		0, // 메뉴의 핸들(메뉴가 없기에 0 지정)
 		instanceHandle, // 창과 연결되는(자식) 어플리게키션 핸들
 		0); //사용자 지정의 데이터로의 포인터
 
