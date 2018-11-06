@@ -2,27 +2,12 @@
 #include <mmsystem.h>
 #include <d3dx9.h>
 
-#define USE_TEXTURE
-
-LPDIRECT3D9	g_pD3D = NULL;
-LPDIRECT3DDEVICE9 g_pd3dDevice = NULL;
-LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL;
-LPDIRECT3DTEXTURE9 g_pTexture = NULL;
-
-struct CUSTOMVERTEX
-{
-	D3DXVECTOR3 position;
-	D3DCOLOR color;
-#ifdef USE_TEXTURE
-	FLOAT tu, tv;
-#endif
-};
-
-#ifdef USE_TEXTURE
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1) 
-#else
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ | D3DFVF_DIFFUSE) 
-#endif
+LPDIRECT3D9				g_pD3D = NULL;
+LPDIRECT3DDEVICE9		g_pd3dDevice = NULL;
+LPD3DXMESH				g_pMesh = NULL;
+D3DMATERIAL9*			g_pMeshMaterials = NULL;
+LPDIRECT3DTEXTURE9*  g_pMeshTextures = NULL;
+DWORD						g_dwNumMaterials = 0L;
 
 HRESULT InitD3D(HWND hWnd)
 {
@@ -39,48 +24,23 @@ HRESULT InitD3D(HWND hWnd)
 	if (FAILED(g_pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd,
 		D3DCREATE_SOFTWARE_VERTEXPROCESSING, &d3dpp, &g_pd3dDevice))) return E_FAIL;
 
-	g_pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-	g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
 	g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, TRUE);
+	g_pd3dDevice->SetRenderState(D3DRS_AMBIENT, 0xffffffff);
 
 	return S_OK;
 }
 
 HRESULT InitGeometry()
 {
-	if (FAILED(D3DXCreateTextureFromFile(g_pd3dDevice, L"tile.jpg", &g_pTexture)))
+	LPD3DXBUFFER pD3DXMtrlBuffer;
+
+	if (FAILED(D3DXLoadMeshFromX(L"Tiger.x", D3DXMESH_SYSTEMMEM,
+		g_pd3dDevice, NULL, &pD3DXMtrlBuffer, NULL, &g_dwNumMaterials, &g_pMesh)))
 	{
-		if (FAILED(D3DXCreateTextureFromFile(g_pd3dDevice, L"..\\tile.jpg", &g_pTexture)))
-		{
-			MessageBox(NULL, L"Could not find banana.bmp", L"Textures.exe", MB_OK);
-			return E_FAIL;
-		}
+		if (FAILED(D3DXLoadMeshFromX(L"..\\Tiger.x", D3DXMESH_SYSTEMMEM,
+			g_pd3dDevice, NULL, &pD3DXMtrlBuffer, NULL, &g_dwNumMaterials, &g_pMesh)))
 	}
 
-	if (FAILED(g_pd3dDevice->CreateVertexBuffer(50 * 2 * sizeof(CUSTOMVERTEX),
-		0, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL))) return E_FAIL;
-		
-	CUSTOMVERTEX* pVertices;
-	if (FAILED(g_pVB->Lock(0, 0, (void**)&pVertices, 0))) return E_FAIL;
-
-	for (DWORD i = 0; i < 50; i++)
-	{
-		FLOAT theta = (2 * D3DX_PI * i) / (50 - 1);
-
-		pVertices[2 * i + 0].position = D3DXVECTOR3(sinf(theta), -1.0f, cosf(theta));
-		pVertices[2 * i + 0].color = 0xffffffff;
-#ifdef USE_TEXTURE
-		pVertices[2 * i + 0].tu = ((FLOAT) i) / (50 - 1);
-		pVertices[2 * i + 0].tv = 1.0f;
-#endif
-		pVertices[2 * i + 1].position = D3DXVECTOR3(sinf(theta), 1.0f, cosf(theta));
-		pVertices[2 * i + 1].color = 0xff808080;
-#ifdef USE_TEXTURE
-		pVertices[2 * i + 1].tu = ((FLOAT)i) / (50 - 1);
-		pVertices[2 * i + 1].tv = 0.0f;
-#endif
-	}
-	g_pVB->Unlock();
 
 	return S_OK;
 }
@@ -208,7 +168,7 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 			ShowWindow(hWnd, SW_SHOWDEFAULT);
 			UpdateWindow(hWnd);
 
-			MSG msg;
+			MSG msg; 
 			ZeroMemory(&msg, sizeof(msg));
 			while (msg.message != WM_QUIT)
 			{
