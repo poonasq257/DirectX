@@ -5,7 +5,40 @@
 using namespace std;
 
 template<typename TYPE>
-class Position 
+class Vector_Position 
+{
+public:
+	Position() : ptr(nullptr) {}
+	Position(TYPE* ptr) : ptr(ptr) {}
+	Position(Position& other) : ptr(other.ptr) {}
+public:
+	void operator=(Position& other) { ptr = other.ptr; }
+	void operator++() { ptr++; }
+	void operator--() { ptr--; }
+	Position& operator+(int size) 
+	{
+		ptr += size;
+		return *this; 
+	}
+	Position& operator+(const Position& other) 
+	{
+		this->ptr += other.ptr;
+		return *this;
+	}
+	Position& operator-(int size)
+	{
+		ptr -= size;
+		return *this;
+	}
+	int operator-(const Position& other) { return this->ptr - other.ptr; }
+	bool operator==(const Position& other) { return this->ptr == other.ptr; }
+	bool operator!=(const Position& other) { return this->ptr != other.ptr; }
+	TYPE* operator*() { return ptr; }
+private:
+	TYPE* ptr;
+};
+
+class List_Position 
 {
 public:
 	Position() : ptr(nullptr) {}
@@ -48,7 +81,7 @@ public:
 		TYPE data;
 		Node* next;
 	};
-	using POSITION = Position<Node>;
+	using POSITION = List_Position<Node>;
 public:
 	List() : head(new Node()), tail(head), count(0) {}
 	~List() { delete head; }
