@@ -1,67 +1,40 @@
 #include "d3dUtility.h"
 
 
-struct CUSTOMVERTEX
-{
-	FLOAT x, y, z, rhw;
-	DWORD color;       
-};
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW|D3DFVF_DIFFUSE)
-
-// 삼각형 제작용
-LPDIRECT3D9             g_pD3D = NULL; // Used to create the D3DDevice
-LPDIRECT3DDEVICE9       g_pd3dDevice = NULL; // Our rendering device
-LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL; // Buffer to hold Vertices
- // 여기 까지
-
-// 용책 DRAW
-IDirect3DVertexBuffer9* VB = 0;
-//IDirect3DIndexBuffer9* IB = 0;
-
-
-
-
 IDirect3DDevice9* Device = 0;
 
 int Width = 1024;
 int Height = 768;
 
 ID3DXMesh* mesh = 0;
+//추가 오브젝트 메쉬
+ID3DXMesh* Objects[5] = { 0, 0, 0, 0, 0 };
 
-//-----------------------------------------------------------------------------//
-// 삼각형용 VERTEX
-//-----------------------------------------------------------------------------//
-HRESULT InitVB()
+
+// 월드 스페이스에서의 메쉬 위치를 관리하는 행열
+D3DXMATRIX ObjWorldMatrices[6];
+
+//큐브 생성을 위한 버텍스와 인덱스 버퍼
+IDirect3DVertexBuffer9* VB = 0;
+IDirect3DIndexBuffer9*  IB = 0;
+
+//삼각형용 버텍스 버퍼
+IDirect3DVertexBuffer9* Triangle = 0; // vertex buffer to store
+									  // our triangle data.
+
+
+struct Vertex
 {
-	// Initialize three Vertices for rendering a triangle
-	CUSTOMVERTEX Vertices[] =
+	Vertex() {}
+	Vertex(float x, float y, float z)
 	{
-		{ 150.0f,  50.0f, 0.5f, 1.0f, 0xffff0000, }, // x, y, z, rhw, color
-		{ 250.0f, 250.0f, 0.5f, 1.0f, 0xff00ff00, },
-		{ 50.0f, 250.0f, 0.5f, 1.0f, 0xff00ffff, },
-	};
-
-	// Create the vertex buffer. Here we are allocating enough memory
-	// (from the default pool) to hold all our 3 custom Vertices. We also
-	// specify the FVF, so the vertex buffer knows what data it contains.
-	if (FAILED(Device->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),
-		0, D3DFVF_CUSTOMVERTEX,
-		D3DPOOL_DEFAULT, &g_pVB, NULL)))
-	{
-		return E_FAIL;
+		_x = x;  _y = y;  _z = z;
 	}
+	float _x, _y, _z;
+	static const DWORD FVF;
+};
+const DWORD Vertex::FVF = D3DFVF_XYZ;
 
-	// Now we fill the vertex buffer. To do this, we need to Lock() the VB to
-	// gain access to the Vertices. This mechanism is required becuase vertex
-	// buffers may be in device memory.
-	VOID* pVertices;
-	if (FAILED(g_pVB->Lock(0, sizeof(Vertices), (void**)&pVertices, 0)))
-		return E_FAIL;
-	memcpy(pVertices, Vertices, sizeof(Vertices));
-	g_pVB->Unlock();
-
-	return S_OK;
-}
 
 //-----------------------------------------------------------------------------//
 // Setup :자원 할당, 장치의 특성 확인, 어플리케이션 상태의 설정 등과 같이 예제를 실행하기 위한 사전 준지 작업 수행
@@ -70,6 +43,121 @@ bool Setup()
 {
 	//ID3DXMesh* mesh = 0;
 	D3DXCreateTeapot(Device, &mesh, 0);
+
+
+	Device->CreateVertexBuffer(
+		8 * sizeof(Vertex),
+		D3DUSAGE_WRITEONLY,
+		Vertex::FVF,
+		D3DPOOL_MANAGED,
+		&VB,
+		0);
+
+	Device->CreateIndexBuffer(
+		39 * sizeof(WORD),
+		D3DUSAGE_WRITEONLY,
+		D3DFMT_INDEX16,
+		D3DPOOL_MANAGED,
+		&IB,
+		0);
+
+
+	Vertex* vertices;
+	VB->Lock(0, 0, (void**)&vertices, 0);
+
+	// vertices of a unit cube
+	vertices[0] = Vertex(-1.0f, -1.0f, -1.0f);
+	vertices[1] = Vertex(-1.0f, 1.0f, -1.0f);
+	vertices[2] = Vertex(1.0f, 1.0f, -1.0f);
+	vertices[3] = Vertex(1.0f, -1.0f, -1.0f);
+	vertices[4] = Vertex(-1.0f, -1.0f, 1.0f);
+	vertices[5] = Vertex(-1.0f, 1.0f, 1.0f);
+	vertices[6] = Vertex(1.0f, 1.0f, 1.0f);
+	vertices[7] = Vertex(1.0f, -1.0f, 1.0f);
+	
+	//삼각형을 위한 버텍스
+	vertices[0] = Vertex(-1.0f, 0.0f, 2.0f);
+	vertices[1] = Vertex(0.0f, 5.0f, 20.0f);
+	vertices[2] = Vertex(1.0f, 0.0f, 12.0f);
+
+	VB->Unlock();
+
+	WORD* indices = 0;
+	IB->Lock(0, 0, (void**)&indices, 0);
+
+	// front side
+	indices[0] = 0; indices[1] = 1; indices[2] = 2;
+	indices[3] = 0; indices[4] = 2; indices[5] = 3;
+
+	// back side
+	indices[6] = 4; indices[7] = 6; indices[8] = 5;
+	indices[9] = 4; indices[10] = 7; indices[11] = 6;
+
+	// left side
+	indices[12] = 4; indices[13] = 5; indices[14] = 1;
+	indices[15] = 4; indices[16] = 1; indices[17] = 0;
+
+	// right side
+	indices[18] = 3; indices[19] = 2; indices[20] = 6;
+	indices[21] = 3; indices[22] = 6; indices[23] = 7;
+
+	// top
+	indices[24] = 1; indices[25] = 5; indices[26] = 6;
+	indices[27] = 1; indices[28] = 6; indices[29] = 2;
+
+	// bottom
+	indices[30] = 4; indices[31] = 0; indices[32] = 3;
+	indices[33] = 4; indices[34] = 3; indices[35] = 7;
+
+	IB->Unlock();
+
+	D3DXCreateTeapot(
+		Device,
+		&Objects[0],
+		0);
+
+	D3DXCreateBox(
+		Device,
+		2.0f, // width
+		2.0f, // height
+		2.0f, // depth
+		&Objects[1],
+		0);
+
+	D3DXCreateCylinder(
+		Device,
+		1.0f, // radius at negative z end
+		1.0f, // radius at positive z end
+		3.0f, // length of cylinder
+		10,   // slices
+		10,   // stacks
+		&Objects[2],
+		0);
+
+	D3DXCreateTorus(
+		Device,
+		1.0f, // inner radius
+		3.0f, // outer radius
+		10,   // sides
+		10,   // rings
+		&Objects[3],
+		0);
+
+	D3DXCreateSphere(
+		Device,
+		1.0f, // radius
+		10,   // slices
+		10,   // stacks
+		&Objects[4],
+		0);
+
+	// 월드 스페이스 할당
+	D3DXMatrixTranslation(&ObjWorldMatrices[0], 0.0f, 0.0f, 0.0f);
+	D3DXMatrixTranslation(&ObjWorldMatrices[1], -5.0f, 0.0f, 5.0f);
+	D3DXMatrixTranslation(&ObjWorldMatrices[2], 5.0f, 0.0f, 5.0f);
+	D3DXMatrixTranslation(&ObjWorldMatrices[3], -5.0f, 0.0f, -5.0f);
+	D3DXMatrixTranslation(&ObjWorldMatrices[4], 5.0f, 0.0f, -5.0f);
+	//D3DXMatrixTranslation(&ObjWorldMatrices[6], 3.0f, -4.0f, 0.0f);
 
 	// ----------------------------------------- //
 	// 카메라 초기화(위치와 방향 조정)
@@ -139,6 +227,7 @@ bool Display(float timeDelta)// timeDelta : 각 프레임 경과 시간 - 초당 프레임과 
 
 		Device->SetTransform(D3DTS_WORLD, &p);
 		*/
+		
 
 		// ----------------------------------------- //
 		// 장면을 그려낸다
@@ -148,12 +237,23 @@ bool Display(float timeDelta)// timeDelta : 각 프레임 경과 시간 - 초당 프레임과 
 		Device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xFFFFFFFF, 1.0f, 0);
 
 		Device->BeginScene(); // 장면 그리기 시작!
-
-		// 삼각형 그리기
-		Device->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
-		Device->SetFVF(D3DFVF_CUSTOMVERTEX);
+		
+		// 큐브 
+		//Device->SetTransform(D3DTS_WORLD, &ObjWorldMatrices[6]);
+		Device->SetStreamSource(0, VB, 0, sizeof(Vertex));
+		Device->SetIndices(IB);
+		Device->SetFVF(Vertex::FVF);
+		//Device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, 8, 0, 12);
 		Device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 1);
+		for (int i = 0; i < 5; i++)
+		{
+			// 로컬스페이스 -> 월드 스페이스 변환
+			Device->SetTransform(D3DTS_WORLD, &ObjWorldMatrices[i]);
 
+			// Draw the object using the previously set world matrix.
+			Objects[i]->DrawSubset(0);
+		}
+		
 
 		//mesh->DrawSubset(0); // 주전자를 그린다
 
@@ -171,14 +271,14 @@ bool Display(float timeDelta)// timeDelta : 각 프레임 경과 시간 - 초당 프레임과 
 //-----------------------------------------------------------------------------//
 void Cleanup()
 {
-	if (g_pVB != NULL)
-		g_pVB->Release();
 
 	if (Device != NULL)
 		Device->Release();
+	for (int i = 0; i < 5; i++)
+		d3d::Release<ID3DXMesh*>(Objects[i]);
 
-	if (g_pD3D != NULL)
-		g_pD3D->Release();
+	d3d::Release<IDirect3DVertexBuffer9*>(VB);
+	d3d::Release<IDirect3DIndexBuffer9*>(IB);
 
 	mesh->Release();
 	mesh = 0;
