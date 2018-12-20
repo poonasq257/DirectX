@@ -1,0 +1,143 @@
+////////////////////////////////////////////////////////////////////////////
+
+// File: diffuse.txt  
+
+////////////////////////////////////////////////////////////////////////////
+
+ 
+
+ 
+
+matrix ViewMatrix;            // 뷰 행렬
+
+matrix ViewProjMatrix;        // 투영 행렬
+
+ 
+
+vector AmbientMtrl;            // 환경 재질
+
+vector DiffuseMtrl;            // 난반사 재질
+
+ 
+
+vector LightDirection;        // 광원의 방향
+
+ 
+
+// 환경, 난반사 재질의 강도.
+
+vector DiffuseLightIntensity = {0.0f, 0.0f, 1.0f, 1.0f};
+
+vector AmbientLightIntensity = {0.0f, 0.0f, 0.2f, 1.0f};
+
+ 
+
+ 
+
+struct VS_INPUT
+
+{
+
+    vector position : POSITION;
+
+    vector normal   : NORMAL;
+
+};
+
+ 
+
+struct VS_OUTPUT
+
+{
+
+    vector position : POSITION;
+
+    vector diffuse  : COLOR;
+
+};
+
+ 
+
+ 
+
+VS_OUTPUT Main(VS_INPUT input)
+
+{
+
+    // 출력 인스턴스의 모든 멤버를 0으로 채운다.
+
+    VS_OUTPUT output = (VS_OUTPUT)0;
+
+ 
+
+    // position을 투영으로 변환하고,
+
+    // 이를 output.position 멤버에 보관한다.
+
+    output.position = mul(input.position, ViewProjMatrix);
+
+ 
+
+    input.normal.w   = 0.0f;   
+
+    // 법선의 w성분을 0으로.
+
+    // 조명과 법선을 뷰 스페이스로 변환한다.
+
+    vector tmp        = mul(LightDirection, ViewMatrix);
+
+    input.normal    = mul(input.normal,   ViewMatrix);
+
+ 
+
+    // 광원과 법선 간 각도의 코사인 계산.
+
+    float s = dot(tmp, input.normal);
+
+ 
+
+    // 표면과 조명 간의 각도가 90도를 넘을 경우
+
+    // 표면은 전혀 빛을 받지 못하기 때문에,
+
+    // 따라서 각도가 90도보다 큰 경우에는
+
+    // s를 0으로 지정하여 표면이 빛을 받지 않도록 한다.
+
+    if( s < 0.0f )
+
+        s = 0.0f;
+else if(s>0.0f && s<0.5f)
+s= 0.3f;
+else if(s> 0.5f)
+s = 0.6f;
+
+    // 반사되는 환경광은 환경 재질 벡터와 환경 광원 벡터간의
+
+    // 성분 단위의 곱으로 얻을 수 있다.
+
+ 
+
+    // 반사되는 난반사광은 난반사 재질 벡터와 난반사 광원 강도 벡터간의
+
+    // 성분 단위의 곱으로 얻을 수 있다.
+
+    // 여기에 각각의 버텍스가 광원으로부터 받는 빛의 양을
+
+    // 조절하는 셰이딩 스칼라 s로 각 성분의 크기를 조절한다.
+
+ 
+
+    // 환경과 난반사 성분의 합을 통해
+
+    // 최종 버텍스 컬러를 얻을 수 있다.
+
+    output.diffuse =  
+
+                    (s );
+
+ 
+
+    return output;
+
+}

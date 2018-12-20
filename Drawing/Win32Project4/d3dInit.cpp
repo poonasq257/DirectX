@@ -75,10 +75,7 @@ bool Setup()
 	vertices[6] = Vertex(1.0f, 1.0f, 1.0f);
 	vertices[7] = Vertex(1.0f, -1.0f, 1.0f);
 	
-	//삼각형을 위한 버텍스
-	vertices[0] = Vertex(-1.0f, 0.0f, 2.0f);
-	vertices[1] = Vertex(0.0f, 5.0f, 20.0f);
-	vertices[2] = Vertex(1.0f, 0.0f, 12.0f);
+
 
 	VB->Unlock();
 
@@ -152,12 +149,12 @@ bool Setup()
 		0);
 
 	// 월드 스페이스 할당
-	D3DXMatrixTranslation(&ObjWorldMatrices[0], 0.0f, 0.0f, 0.0f);
-	D3DXMatrixTranslation(&ObjWorldMatrices[1], -5.0f, 0.0f, 5.0f);
-	D3DXMatrixTranslation(&ObjWorldMatrices[2], 5.0f, 0.0f, 5.0f);
-	D3DXMatrixTranslation(&ObjWorldMatrices[3], -5.0f, 0.0f, -5.0f);
-	D3DXMatrixTranslation(&ObjWorldMatrices[4], 5.0f, 0.0f, -5.0f);
-	//D3DXMatrixTranslation(&ObjWorldMatrices[6], 3.0f, -4.0f, 0.0f);
+	D3DXMatrixTranslation(&ObjWorldMatrices[0], 2.0f, 3.0f, 0.0f);
+	D3DXMatrixTranslation(&ObjWorldMatrices[1], 4.0f, 4.0f, 0.0f);
+	D3DXMatrixTranslation(&ObjWorldMatrices[2], 5.0f, 2.0f, 0.0f);
+	D3DXMatrixTranslation(&ObjWorldMatrices[3], -2.0f, 0.0f, 0.0f);
+	D3DXMatrixTranslation(&ObjWorldMatrices[4], 7.0f, -2.0f, 0.0f);
+	D3DXMatrixTranslation(&ObjWorldMatrices[5], 3.0f, 0.0f, 0.0f);
 
 	// ----------------------------------------- //
 	// 카메라 초기화(위치와 방향 조정)
@@ -175,7 +172,7 @@ bool Setup()
 	// ----------------------------------------- //
 
 	D3DXMATRIX proj;
-	D3DXMatrixPerspectiveFovLH(&proj, D3DX_PI * 0.6f, (float) Width / (float) Height, 1.0f, 1000.0f);
+	D3DXMatrixPerspectiveFovLH(&proj, D3DX_PI * 0.8f, (float) Width / (float) Height, 1.0f, 1000.0f);
 	// 투영 행렬, 시야각의 수직 영역(라디안), 종황비 = 너비 / 높이, 가가운 평면까지의 거리, 먼 평면까지의 거리
 	Device->SetTransform(D3DTS_PROJECTION, &proj);
 
@@ -207,9 +204,10 @@ bool Display(float timeDelta)// timeDelta : 각 프레임 경과 시간 - 초당 프레임과 
 		// ----------------------------------------- //
 		// 입방체를 회전시킨다
 		// ----------------------------------------- //
-		/*
+		//
 		D3DXMATRIX rx, ry;
-
+		D3DXMatrixIdentity(&rx);
+		D3DXMatrixIdentity(&ry);
 		// x축으로 45도 회전시킨다
 		D3DXMatrixRotationX(&rx, 3.14f / 4.0f);
 
@@ -223,11 +221,9 @@ bool Display(float timeDelta)// timeDelta : 각 프레임 경과 시간 - 초당 프레임과 
 			y = 0.0f;
 
 		// 회전을 결합한다
-		D3DXMATRIX p = rx * ry;
 
-		Device->SetTransform(D3DTS_WORLD, &p);
-		*/
-		
+
+
 
 		// ----------------------------------------- //
 		// 장면을 그려낸다
@@ -240,19 +236,26 @@ bool Display(float timeDelta)// timeDelta : 각 프레임 경과 시간 - 초당 프레임과 
 		
 		// 큐브 
 		//Device->SetTransform(D3DTS_WORLD, &ObjWorldMatrices[6]);
+		
+		//Device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 1);
+		for (int i = 0; i < 5; i++)
+		{
+			D3DXMATRIX p = rx * ry * ObjWorldMatrices[i];
+			Device->SetTransform(D3DTS_WORLD, &p);
+			
+			// Draw the object using the previously set world matrix.
+			Objects[i]->DrawSubset(0);
+			
+		}
+
+
+		
+
+		Device->SetTransform(D3DTS_WORLD, &ObjWorldMatrices[5]);
 		Device->SetStreamSource(0, VB, 0, sizeof(Vertex));
 		Device->SetIndices(IB);
 		Device->SetFVF(Vertex::FVF);
-		//Device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, 8, 0, 12);
-		Device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 1);
-		for (int i = 0; i < 5; i++)
-		{
-			// 로컬스페이스 -> 월드 스페이스 변환
-			Device->SetTransform(D3DTS_WORLD, &ObjWorldMatrices[i]);
-
-			// Draw the object using the previously set world matrix.
-			Objects[i]->DrawSubset(0);
-		}
+		Device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, 8, 0, 12);
 		
 
 		//mesh->DrawSubset(0); // 주전자를 그린다

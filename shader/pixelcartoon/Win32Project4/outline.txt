@@ -1,0 +1,90 @@
+////////////////////////////////////////////////////////////////////////////
+// File: diffuse.txt       
+////////////////////////////////////////////////////////////////////////////
+
+ 
+
+//
+// Globals
+//
+
+ 
+
+extern matrix WorldViewMatrix;
+extern matrix ProjMatrix;
+
+static vector Black = {0.0f, 0.0f, 0.0f, 0.0f};
+
+
+//
+// Structures
+//
+
+ 
+struct VS_INPUT
+{
+    vector position    : POSITION;        // 위치
+    vector normal      : NORMAL0;        // 법선
+    vector faceNormal1 : NORMAL1;        // 외각선을 공유하는 면의 면 법선
+    vector faceNormal2 : NORMAL2;        // 외각선을 공유하는 면의 면 법선
+};
+
+ 
+
+struct VS_OUTPUT
+{
+   vector position : POSITION;
+    vector diffuse  : COLOR;
+};
+
+//
+// Main
+//
+
+
+VS_OUTPUT Main(VS_INPUT input)
+{
+    VS_OUTPUT output = (VS_OUTPUT)0;
+    // output의 모든 멤버를 0으로 채운다.
+    input.position = mul(input.position, WorldViewMatrix);
+    // 뷰 스페이스로 position을 변환.
+    vector eyeToVertex = input.position;
+    // 시점에서 버텍스로의 방향 벡터를 계산.
+    // 시점은 뷰 스페이스의 원점이며,
+    // 카메라의 위치이다.
+
+    input.normal.w      = 0.0f;
+    input.faceNormal1.w = 0.0f;
+    input.faceNormal2.w = 0.0f;
+    // 법선을 뷰 스페이스로 변환.
+    // 벡터를 변환하는 것이므로 w를 0으로 지정.
+    // 월드 행렬에서는 크기 변형을 하지 않는다고 가정.
+    input.normal      = mul(input.normal,      WorldViewMatrix);
+    input.faceNormal1 = mul(input.faceNormal1, WorldViewMatrix);
+    input.faceNormal2 = mul(input.faceNormal2, WorldViewMatrix);
+    // 법선과 면 법선을 동종 클립 스페이스(투영 변환을 거친 버텍스가 저장되는 공간)로 변환한다.
+
+    float dot0 = dot(eyeToVertex, input.faceNormal1);
+    float dot1 = dot(eyeToVertex, input.faceNormal2);
+    // eyeToVertex 벡터와 면 법선 간 각도의 코사인 계산.
+
+
+    // 만약 코사인이 다른 부호일 경우( 양수/ 음수 )
+    // 실루엣 외곽선이다. 부호가 다른지 검사한다.
+    if( (dot0 * dot1) < 0.0f )
+    {
+        input.position += 0.1f * input.normal;
+        // 현재 버텍스가 실루엣 외곽선이라면,
+        // 버텍스 위치를 버텍스 법선 방향으로
+        // 약간의 스칼라 만큼 오프셋 이동한다.
+    }
+
+    output.position = mul(input.position, ProjMatrix);
+    // 동종 클립 공간으로 변환.
+
+    output.diffuse = Black;
+    // 외곽선 컬러 지정.
+
+    return output;
+
+}

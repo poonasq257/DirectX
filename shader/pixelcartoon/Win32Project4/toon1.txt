@@ -1,0 +1,100 @@
+////////////////////////////////////////////////////////////////////////////
+// File: toon.txt 
+////////////////////////////////////////////////////////////////////////////
+
+ 
+//
+// Globals
+//
+
+ 
+//
+// extern은 전역변수에서 static이 아니면 디폴트이므로 생략가능.
+//
+
+extern matrix WorldViewMatrix;
+extern matrix WorldViewProjMatrix;
+static vector Color;
+extern vector LightDirection;
+
+static const float4 ColorThreshold = {0.3, 0.6, 1.0, 1.0};
+
+//
+// 입력 구조체(위치와 법선을 포함한다).
+//
+
+struct VS_INPUT
+{
+    vector position : POSITION;
+    vector normal   : NORMAL;
+};
+
+//
+// 출력 구조체(위치, 텍스처 좌표, 색상).
+//
+
+struct VS_OUTPUT
+{
+    vector position : POSITION;
+    float2 uvCoords : TEXCOORD;
+    vector diffuse  : COLOR;
+};
+
+float CutOff(float v)
+{
+	if( v < ColorThreshold.x)
+	return ColorThreshold.x;
+	else 
+	if( v< ColorThreshold.y)
+	return ColorThreshold.y;
+	else
+	return ColorThreshold.z;
+}
+
+float4 PS11(VS_OUTPUT In) : COLOR
+{
+	float v = CutOff(In.diffuse.a);
+	//float4 r;	
+
+	//Color.r = (v  );
+	Color.g = (v );
+	//Color.b = (v );
+
+	Color.w = 1;
+	return Color;
+}
+
+
+
+VS_OUTPUT Main(VS_INPUT input)
+{
+    VS_OUTPUT output = (VS_OUTPUT)0;
+
+    output.position = mul(input.position, WorldViewProjMatrix);
+
+    // 버텍스 위치를 동종 클립 스페이스(투영 변환을 거친 버텍스가 저장되는 공간)로 변환한다.
+    input.normal.w   = 0.0f;
+
+    vector tmp        = mul(LightDirection, WorldViewMatrix);
+    input.normal    = mul(input.normal, WorldViewMatrix);
+
+    float u = dot(tmp, input.normal);
+
+    // 카툰 렌더링을 위한 1D 텍스처 좌표를 계산.
+    if( u < 0.0f )
+       u = 0.0f;
+
+    float v = 0.5f;
+
+    // 다른 텍스처 좌표를 중간으로 지정.
+    output.uvCoords.x = u;
+    output.uvCoords.y = v;
+    // save color
+
+
+    output.diffuse =    PS11(output);
+
+    return output;
+}
+
+

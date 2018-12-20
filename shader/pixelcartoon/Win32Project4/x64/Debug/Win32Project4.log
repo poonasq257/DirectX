@@ -1,0 +1,11 @@
+﻿  toon.cpp
+  silhouetteEdges.cpp
+c:\users\administrator\documents\dircetx\pixelcartoon\win32project4\silhouetteedges.cpp(115): warning C4244: '초기화 중': 'DWORD'에서 'WORD'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\administrator\documents\dircetx\pixelcartoon\win32project4\silhouetteedges.cpp(116): warning C4244: '초기화 중': 'DWORD'에서 'WORD'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\administrator\documents\dircetx\pixelcartoon\win32project4\silhouetteedges.cpp(117): warning C4244: '초기화 중': 'DWORD'에서 'WORD'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+c:\users\administrator\documents\dircetx\pixelcartoon\win32project4\silhouetteedges.cpp(225): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
+  d3dUtility.cpp
+c:\users\administrator\documents\dircetx\pixelcartoon\win32project4\d3dutility.cpp(151): warning C4244: 'return': 'WPARAM'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  코드를 생성하고 있습니다...
+  Win32Project4.vcxproj -> C:\Users\Administrator\Documents\Dircetx\pixelcartoon\x64\Debug\Win32Project4.exe
+  Win32Project4.vcxproj -> C:\Users\Administrator\Documents\Dircetx\pixelcartoon\x64\Debug\Win32Project4.pdb (Full PDB)
